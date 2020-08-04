@@ -1,0 +1,179 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+  (Fill in comments below)
+*******************************************************************************************/
+/*
+Dealer Name: HPE
+System Name: Serial String Queue
+System Number:
+Programmer: DOP
+Comments: Provides serial strings in a queue based on state of the digital signals. 
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+// #ENABLE_DYNAMIC
+#SYMBOL_NAME "String Queue"
+// #HINT ""
+#DEFINE_CONSTANT MAX_SIZE 5
+#DEFINE_CONSTANT MAX_STRING_SIZE 255
+// #CATEGORY "" 
+#CATEGORY "10" // Serial
+// #PRINT_TO_TRACE
+#DIGITAL_EXPAND AllWithAny
+#ANALOG_SERIAL_EXPAND AllWithAny
+// #OUTPUT_SHIFT 
+// #HELP_PDF_FILE ""
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+// #ENCODING_ASCII
+// #ENCODING_UTF16
+// #ENCODING_INHERIT_FROM_PARENT
+// #ENCODING_INHERIT_FROM_PROGRAM
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+
+/*******************************************************************************************
+  DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
+  (Uncomment and declare inputs and outputs as needed)
+*******************************************************************************************/
+DIGITAL_INPUT d_queue[MAX_SIZE,1];
+STRING_INPUT s_in[MAX_SIZE,1][MAX_STRING_SIZE];
+
+STRING_OUTPUT sQueue_out[MAX_SIZE];
+
+/*******************************************************************************************
+  Structure Definitions
+  (Uncomment and define structure definitions as needed)
+  Note:  Be sure to initialize all declared STRING variables as needed
+         For example, in Function Main: struct.myString = "";
+*******************************************************************************************/
+
+STRUCTURE Queue
+{
+	STRING text[MAX_STRING_SIZE];
+	INTEGER controlIndex;
+};
+
+Queue sQueue[MAX_SIZE];
+
+
+/*******************************************************************************************
+  Global Variables
+  (Uncomment and declare global variables as needed)
+  Note:  Be sure to initialize all declared STRING variables as needed
+         For example, in Function Main: myString = "";
+*******************************************************************************************/
+INTEGER queue_size;
+
+/*******************************************************************************************
+  Functions
+  (Add any additional functions here)
+  Note:  Functions must be physically placed before the location in
+         the code that calls them.
+*******************************************************************************************/
+
+Function prop_outputs()
+{
+	INTEGER i;
+	i = 1;
+	for(i = 1 to MAX_SIZE){
+		sQueue_out[i] = sQueue[i].text;
+	}
+}
+
+
+
+Integer_Function enqueue_input(INTEGER input_index)
+{
+	INTEGER i;
+	i = 1;
+	for(i = 1 to MAX_SIZE){
+    	if(sQueue[i].controlIndex = input_index){
+    		//incorrect usage, input already queued.
+			return(-1);
+		}
+	}
+	sQueue[queue_size + 1].text = s_in[input_index];
+	sQueue[queue_size + 1].controlIndex = input_index;
+	queue_size = queue_size + 1;
+	return(0);
+}
+
+
+                    
+Integer_Function dequeue_input(INTEGER input_index)
+{
+    INTEGER i,j;
+	i = 1;
+	for(i = 1 to MAX_SIZE){
+    	if(sQueue[i].controlIndex = input_index){
+    		j = i;
+			for(j = i to (MAX_SIZE - 1)){
+				sQueue[j].text = sQueue[j + 1].text;
+				sQueue[j].controlIndex = sQueue[j + 1].controlIndex;
+				
+			}
+			sQueue[MAX_SIZE].text = "";
+			sQueue[MAX_SIZE].controlIndex = 0;
+			queue_size = queue_size - 1;
+			return(0);
+		}
+	}
+	//incorrect usage, input not queued.
+	return(-1);
+}
+
+/*******************************************************************************************
+  Event Handlers
+  (Uncomment and declare additional event handlers as needed)
+*******************************************************************************************/
+
+PUSH d_queue
+{
+	INTEGER index;
+	index = GetLastModifiedArrayIndex();
+	enqueue_input(index);
+	prop_outputs();
+}
+
+
+
+RELEASE d_queue
+{
+	INTEGER index;
+	index = GetLastModifiedArrayIndex();
+	dequeue_input(index);
+	prop_outputs();
+}
+
+/*******************************************************************************************
+  Main()
+  Uncomment and place one-time startup code here
+  (This code will get called when the system starts up)
+*******************************************************************************************/
+
+Function Main()
+{
+    INTEGER i,error;
+	i = 1;
+	queue_size = 0;
+    WaitForInitializationComplete();
+	for(i = 1 to MAX_SIZE){
+    	if(d_queue[i] = 1){
+        	error = enqueue_input(i);
+			if(error){
+				//do something
+			}
+		}
+	}
+	prop_outputs();
+}
+
+
