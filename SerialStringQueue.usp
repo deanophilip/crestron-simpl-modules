@@ -10,6 +10,7 @@ Programmer: DOP
 Comments: Provides serial strings in a queue based on state of the digital signals.
 
 V1.0 -- Initial Release
+V1.1 -- Added "enqueue_top_input" function for prioritization
 
 */
 
@@ -132,6 +133,12 @@ Integer_Function dequeue_input(INTEGER input_index)
 	//incorrect usage, input not queued.
 	return(-1);
 }
+
+Integer_Function enqueue_top_input(INTEGER input_index)
+{
+	
+}
+
 
 /*******************************************************************************************
   Event Handlers
