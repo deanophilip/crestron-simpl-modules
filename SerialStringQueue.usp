@@ -5,9 +5,12 @@
 /*
 Dealer Name: HPE
 System Name: Serial String Queue
-System Number:
+System Number: V1.0
 Programmer: DOP
-Comments: Provides serial strings in a queue based on state of the digital signals. 
+Comments: Provides serial strings in a queue based on state of the digital signals.
+
+V1.0 -- Initial Release
+
 */
 
 /*******************************************************************************************
