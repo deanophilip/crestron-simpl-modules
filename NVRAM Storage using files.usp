@@ -1,0 +1,601 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+  (Fill in comments below)
+*******************************************************************************************/
+/*
+Dealer Name: HP Electronics
+System Name: NVRAM Storage using files
+System Number:
+Programmer: DOP
+Comments: Module to store Digital, Analog, and Serial values in a file by keys
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+// #ENABLE_DYNAMIC
+#SYMBOL_NAME "NVRAM Storage using files"
+// #HINT ""
+// #DEFINE_CONSTANT
+#CATEGORY "9" // Memory
+// #PRINT_TO_TRACE
+#DIGITAL_EXPAND AllWithAny
+#ANALOG_SERIAL_EXPAND AllWithAny
+// #OUTPUT_SHIFT 
+// #HELP_PDF_FILE ""
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+// #ENCODING_ASCII
+// #ENCODING_UTF16
+#ENCODING_INHERIT_FROM_PARENT
+// #ENCODING_INHERIT_FROM_PROGRAM
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+
+/*******************************************************************************************
+  Include Libraries
+  (Uncomment and include additional libraries as needed)
+*******************************************************************************************/
+// #CRESTRON_LIBRARY ""
+// #USER_LIBRARY ""
+
+/*******************************************************************************************
+  DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
+  (Uncomment and declare inputs and outputs as needed)
+*******************************************************************************************/
+DIGITAL_INPUT 	_SKIP_;
+DIGITAL_INPUT Input_digital[50];
+ANALOG_INPUT Input_analog[50,1];
+STRING_INPUT Input_string[50][100];
+// BUFFER_INPUT 
+
+DIGITAL_OUTPUT 	_SKIP_;
+DIGITAL_OUTPUT Output_digital[50];
+ANALOG_OUTPUT Output_analog[50,1];
+STRING_OUTPUT Output_string[50];
+/*******************************************************************************************
+  SOCKETS
+  (Uncomment and define socket definitions as needed)
+*******************************************************************************************/
+// TCP_CLIENT
+// TCP_SERVER
+// UDP_SOCKET
+
+/*******************************************************************************************
+  Parameters
+  (Uncomment and declare parameters as needed)
+*******************************************************************************************/
+// INTEGER_PARAMETER
+// SIGNED_INTEGER_PARAMETER
+// LONG_INTEGER_PARAMETER
+// SIGNED_LONG_INTEGER_PARAMETER
+STRING_PARAMETER save_filename[50];
+
+/*******************************************************************************************
+  Parameter Properties
+  (Uncomment and declare parameter properties as needed)
+*******************************************************************************************/
+#BEGIN_PARAMETER_PROPERTIES save_filename
+   propValidUnits = unitString;
+   propDefaultUnit = unitString;
+   propDefaultValue = "Settings";
+   // propList = // { "value" , "label" } , { "value" , "label" } , ... ;
+   propShortDescription = "Filename to be used for nvram storage";
+   // #BEGIN_PROP_FULL_DESCRIPTION  line_1...  line_2...  line_n  #END_PROP_FULL_DESCRIPTION
+   // #BEGIN_PROP_NOTES line_1...  line_2...  line_n  #END_PROP_NOTES
+#END_PARAMETER_PROPERTIES
+
+
+/*
+#BEGIN_PARAMETER_PROPERTIES parameter_variable, parameter_variable, ...
+   // propValidUnits = // unitString or unitDecimal|unitHex|unitPercent|unitCharacter|unitTime|unitTicks;
+   // propDefaultUnit = // unitString, unitDecimal, unitHex, unitPercent, unitCharacter, unitTime or unitTicks;
+   // propBounds = lower_bound , upper_bound;
+   // propDefaultValue = ;  // or, propDefaultValue = "";
+   // propList = // { "value" , "label" } , { "value" , "label" } , ... ;
+   // propShortDescription = "status_bar_hint_text";
+   // #BEGIN_PROP_FULL_DESCRIPTION  line_1...  line_2...  line_n  #END_PROP_FULL_DESCRIPTION
+   // #BEGIN_PROP_NOTES line_1...  line_2...  line_n  #END_PROP_NOTES
+#END_PARAMETER_PROPERTIES
+*/
+
+/*******************************************************************************************
+  Structure Definitions
+  (Uncomment and define structure definitions as needed)
+  Note:  Be sure to initialize all declared STRING variables as needed
+         For example, in Function Main: struct.myString = "";
+*******************************************************************************************/
+/*
+STRUCTURE MyStruct1
+{
+};
+
+MyStruct1 struct;
+*/
+
+/*******************************************************************************************
+  Global Variables
+  (Uncomment and declare global variables as needed)
+  Note:  Be sure to initialize all declared STRING variables as needed
+         For example, in Function Main: myString = "";
+*******************************************************************************************/
+// INTEGER
+// LONG_INTEGER
+// SIGNED_INTEGER
+// SIGNED_LONG_INTEGER
+// STRING
+
+/*******************************************************************************************
+  Functions
+  (Add any additional functions here)
+  Note:  Functions must be physically placed before the location in
+         the code that calls them.
+*******************************************************************************************/
+
+Integer_Function recallDigitalSetting(INTEGER ID)
+{
+	// TODO:  Add local variable declarations here
+    SIGNED_INTEGER fd;
+    STRING sBuf_r[2000];
+	STRING temp$[20], temp_name[60];
+    INTEGER temp_r, temp_index, endLine_index;
+
+    // TODO:  Add code here
+	fd = StartFileOperations();
+	if (fd < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+    temp_name = save_filename + ".d";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp$ = "<d" + ITOA(ID) + ">";
+	temp_r = FileRead(fd, sBuf_r, 2000);
+	temp_index = Find(temp$, sBuf_r);
+	endLine_index = Find("\r\n", sBuf_r, temp_index);
+	temp$ = MID(sBuf_r, temp_index, endLine_index - temp_index);
+	endLine_index = LEN(temp$);
+	temp$ = MID(temp$, temp_index + 2, endLine_index - 1);
+    FileClose(fd);
+
+    fd = EndFileOperations();
+	if (fd < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+
+    Return (ATOI(temp$));
+}
+
+Integer_Function recallAnalogSetting(INTEGER ID)
+{
+	// TODO:  Add local variable declarations here
+    SIGNED_INTEGER fd;
+    STRING sBuf_r[2000];
+	STRING temp$[20], temp_name[60];
+    INTEGER temp_r, temp_index, endLine_index;
+
+    // TODO:  Add code here
+	fd = StartFileOperations();
+	if (fd < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+    temp_name = save_filename + ".a";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp$ = "<a" + ITOA(ID) + ">";
+	temp_r = FileRead(fd, sBuf_r, 2000);
+	temp_index = Find(temp$, sBuf_r);
+	endLine_index = Find("\r\n", sBuf_r, temp_index);
+	temp$ = MID(sBuf_r, temp_index, endLine_index - temp_index);
+	endLine_index = LEN(temp$);
+	temp$ = MID(temp$, temp_index + 2, endLine_index - 1);
+    FileClose(fd);
+
+    fd = EndFileOperations();
+	if (fd < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+
+    Return (ATOI(temp$));
+}
+
+        
+String_Function recallStringSetting(INTEGER ID)
+{
+	// TODO:  Add local variable declarations here
+    SIGNED_INTEGER fd;
+    STRING sBuf_r[6000];
+	STRING temp$[100], temp_name[60];
+    INTEGER temp_r, temp_index, endLine_index;
+
+    // TODO:  Add code here
+	fd = StartFileOperations();
+	if (fd < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+    temp_name = save_filename + ".s";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp$ = "<s" + ITOA(ID) + ">";
+	temp_r = FileRead(fd, sBuf_r, 6000);
+	temp_index = Find(temp$, sBuf_r);
+	endLine_index = Find("\r\n", sBuf_r, temp_index);
+	temp$ = MID(sBuf_r, temp_index, endLine_index - temp_index);
+    FileClose(fd);
+
+    fd = EndFileOperations();
+	if (fd < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+
+    Return (temp$);
+}
+
+Integer_Function updateDigitalSetting(INTEGER ID, INTEGER newVal)
+{
+    // TODO:  Add local variable declarations here
+    SIGNED_INTEGER fd;
+    STRING sBuf_r[2000];
+    STRING sBuf_w[2000];
+	STRING temp$[20], temp_name[60];
+    INTEGER temp_r, temp_index, endLine_index, size;
+    
+    // TODO:  Add code here
+	if (StartFileOperations() < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+    temp_name = save_filename + ".d";
+	fd = FileOpen(temp_name,_O_RDWR|_O_APPEND|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp$ = "<d" + ITOA(ID) + ">";
+	temp_r = FileRead(fd, sBuf_r, 2000);
+	temp_index = Find(temp$, sBuf_r);
+	if(temp_index = 0){
+		FileSeek(fd, 0, SEEK_END);
+		sBuf_w = temp$ + ITOA(newVal) + "\r\n";
+		size = LEN(sBuf_w);
+        FileWrite(fd, sBuf_w, size);
+		FileClose(fd);
+		if (EndFileOperations() < 0){
+			PRINT ( "Error in starting file ops\n" );
+		}
+        return(-1);
+	}
+	endLine_index = Find("\r\n", sBuf_r, temp_index);
+    sBuf_w = LEFT(sBuf_r, temp_index - 1);
+	sBuf_w = sBuf_w + temp$ + ITOA(newVal) + "\r\n" + RIGHT(sBuf_r, temp_r - endLine_index - 1);
+    FileClose(fd);
+	FileDelete(temp_name);
+	fd = FileOpen(temp_name,_O_CREAT|_O_WRONLY|_O_TRUNC|_O_TEXT);
+	size = LEN(sBuf_w);
+	FileWrite(fd, sBuf_w, size);
+    FileClose(fd);
+
+	if (EndFileOperations() < 0){
+		PRINT ( "Error in starting file ops\n" );
+	}
+    return(0);
+}
+
+
+Integer_Function updateAnalogSetting(INTEGER ID, INTEGER newVal)
+{
+    // TODO:  Add local variable declarations here
+    SIGNED_INTEGER fd;
+    STRING sBuf_r[2000];
+    STRING sBuf_w[2000];
+	STRING temp$[20], temp_name[60];
+    INTEGER temp_r, temp_index, endLine_index, size;
+    
+    // TODO:  Add code here
+	if (StartFileOperations() < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+    temp_name = save_filename + ".a";
+	fd = FileOpen(temp_name,_O_RDWR|_O_APPEND|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp$ = "<a" + ITOA(ID) + ">";
+	temp_r = FileRead(fd, sBuf_r, 2000);
+	temp_index = Find(temp$, sBuf_r);
+	if(temp_index = 0){
+		FileSeek(fd, 0, SEEK_END);
+		sBuf_w = temp$ + ITOA(newVal) + "\r\n";
+		size = LEN(sBuf_w);
+        FileWrite(fd, sBuf_w, size);
+		FileClose(fd);
+		if (EndFileOperations() < 0){
+			PRINT ( "Error in starting file ops\n" );
+		}
+        return(-1);
+	}
+	endLine_index = Find("\r\n", sBuf_r, temp_index);
+    sBuf_w = LEFT(sBuf_r, temp_index - 1);
+	sBuf_w = sBuf_w + temp$ + ITOA(newVal) + "\r\n" + RIGHT(sBuf_r, temp_r - endLine_index - 1);
+    FileClose(fd);
+	FileDelete(temp_name);
+	fd = FileOpen(temp_name,_O_CREAT|_O_WRONLY|_O_TRUNC|_O_TEXT);
+	size = LEN(sBuf_w);
+	FileWrite(fd, sBuf_w, size);
+    FileClose(fd);
+
+	if (EndFileOperations() < 0){
+		PRINT ( "Error in starting file ops\n" );
+	}
+    return(0);
+}
+
+
+
+Integer_Function updateStringSetting(INTEGER ID, STRING newVal)
+{
+    // TODO:  Add local variable declarations here
+    SIGNED_INTEGER fd;
+    STRING sBuf_r[6000];
+    STRING sBuf_w[6000];
+	STRING temp$[100], temp_name[60];
+    INTEGER temp_r, temp_index, endLine_index, size;
+    
+    // TODO:  Add code here
+	if (StartFileOperations() < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+    temp_name = save_filename + ".s";
+	fd = FileOpen(temp_name,_O_RDWR|_O_APPEND|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp$ = "<s" + ITOA(ID) + ">";
+	temp_r = FileRead(fd, sBuf_r, 6000);
+	temp_index = Find(temp$, sBuf_r);
+	if(temp_index = 0){
+		FileSeek(fd, 0, SEEK_END);
+		sBuf_w = temp$ + newVal + "\r\n";
+		size = LEN(sBuf_w);
+        FileWrite(fd, sBuf_w, size);
+		FileClose(fd);
+		if (EndFileOperations() < 0){
+			PRINT ( "Error in starting file ops\n" );
+		}
+        return(-1);
+	}
+	endLine_index = Find("\r\n", sBuf_r, temp_index);
+    sBuf_w = LEFT(sBuf_r, temp_index - 1);
+	sBuf_w = sBuf_w + temp$ + newVal + "\r\n" + RIGHT(sBuf_r, temp_r - endLine_index - 1);
+    FileClose(fd);
+	FileDelete(temp_name);
+	fd = FileOpen(temp_name,_O_CREAT|_O_WRONLY|_O_TRUNC|_O_TEXT);
+	size = LEN(sBuf_w);
+	FileWrite(fd, sBuf_w, size);
+    FileClose(fd);
+
+	if (EndFileOperations() < 0){
+		PRINT ( "Error in starting file ops\n" );
+	}
+    return(0);
+	
+}
+
+
+/*******************************************************************************************
+  Event Handlers
+  (Uncomment and declare additional event handlers as needed)
+*******************************************************************************************/
+/*
+PUSH input
+{
+    // TODO:  Add code here
+}
+*/
+
+/*
+RELEASE input
+{
+    // TODO:  Add code here
+}
+*/
+
+/*
+CHANGE input
+{
+    // TODO:  Add code here
+}
+*/
+CHANGE Input_digital
+{
+    INTEGER ID, ret;
+	ID = GetLastModifiedArrayIndex();
+    ret = updateDigitalSetting(ID,Input_digital[ID]);
+	if(ret != 0){
+		Trace("Error updating ID %d, to %d, error: %d", ID, Input_digital[ID], ret);
+	}
+	Output_digital[ID] = Input_digital[ID];
+	// TODO:  Add code here
+    
+}
+
+CHANGE Input_analog
+{
+    INTEGER ID, ret;
+	ID = GetLastModifiedArrayIndex();
+    ret = updateAnalogSetting(ID,Input_analog[ID]);
+	if(ret != 0){
+		Trace("Error updating ID %d, to %d, error: %d", ID, Input_digital[ID], ret);
+	}
+	Output_analog[ID] = Input_analog[ID];
+	// TODO:  Add code here
+    
+}
+
+CHANGE Input_string
+{
+    INTEGER ID, ret;
+	ID = GetLastModifiedArrayIndex();
+    ret = updateStringSetting(ID,Input_string[ID]);
+	if(ret != 0){
+		Trace("Error updating ID %d, to %d, error: %d", ID, Input_digital[ID], ret);
+	}
+	Output_string[ID] = Input_string[ID];
+	// TODO:  Add code here
+    
+}
+
+/*
+EVENT
+{
+    // TODO:  Add code here
+}
+*/
+
+/*
+SOCKETCONNECT
+{
+    // TODO:  Add code here
+}
+*/
+
+/*
+SOCKETDISCONNECT
+{
+    // TODO:  Add code here
+}
+*/
+
+/*
+SOCKETRECEIVE
+{
+    // TODO:  Add code here
+}
+*/
+
+/*
+SOCKETSTATUS
+{
+    // TODO:  Add code here
+}
+*/
+
+/*******************************************************************************************
+  Main()
+  Uncomment and place one-time startup code here
+  (This code will get called when the system starts up)
+*******************************************************************************************/
+
+Function Main()
+{
+	INTEGER num_d, num_a, num_s;
+	SIGNED_INTEGER fd;
+    STRING sBuf_r[6000];
+	STRING temp$[100], temp_name[60];
+    INTEGER temp_r, temp_index, endLine_index, i;
+    num_d = 0;
+	num_a = 0;
+	num_s = 0; 
+    temp_index = 0;
+	// TODO:  Add code here
+    // Initialize declared global and local variables/arrays as needed.
+
+    // TODO:  Add code here
+	fd = StartFileOperations();
+	if (fd < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+    temp_name = save_filename + ".d";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp_r = FileRead(fd, sBuf_r, 2000);
+	temp_index = Find("\r\n", sBuf_r, 1);
+	WHILE(temp_index > 0){
+		num_d = num_d + 1;
+		temp_index = Find("\r\n", sBuf_r, temp_index + 1);
+	}
+    FileClose(fd);
+	temp_index = 0;
+    temp_name = save_filename + ".a";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp_r = FileRead(fd, sBuf_r, 2000);
+	TRACE("temp_r = %d, text = %s", temp_r, sBuf_r);
+	temp_index = Find("\r\n", sBuf_r, 1);
+	TRACE("temp_index = %d", temp_index);	
+	WHILE(temp_index > 0){
+		num_a = num_a + 1;
+		TRACE("num_a = %d", num_a);
+		temp_index = Find("\r\n", sBuf_r, temp_index + 1);
+	}
+    FileClose(fd);
+	temp_index =0;
+    temp_name = save_filename + ".s";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp_r = FileRead(fd, sBuf_r, 6000);
+	temp_index = Find("\r\n", sBuf_r, 1);
+	WHILE(temp_index > 0){
+		num_s = num_s + 1;
+		temp_index = Find("\r\n", sBuf_r, temp_index + 1);
+	}
+    FileClose(fd);
+
+    temp_name = save_filename + ".d";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp_r = FileRead(fd, sBuf_r, 2000);
+	for(i = 1 to num_d){
+    	temp$ = "<d" + ITOA(i) + ">";
+		temp_index = Find(temp$, sBuf_r);
+		endLine_index = Find("\r\n", sBuf_r, temp_index);
+		temp$ = MID(sBuf_r, temp_index, endLine_index - temp_index);
+		TRACE("temp$ = %s, temp_index = %d, endLine_index = %d", temp$, temp_index, endLine_index);
+		temp_index = Find(">", temp$);
+		endLine_index = LEN(temp$);
+		temp$ = MID(temp$, temp_index + 1, (endLine_index - temp_index));
+		TRACE("ending temp$ = %s, ending temp_index = %d, ending endLine_index = %d", temp$, temp_index, endLine_index);
+		Output_digital[i] = ATOI(temp$);
+	}
+    FileClose(fd);
+    temp_name = save_filename + ".a";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp_r = FileRead(fd, sBuf_r, 2000);
+	TRACE("num_a = %d",num_a);
+	for(i = 1 to num_a){
+    	temp$ = "<a" + ITOA(i) + ">";
+		temp_index = Find(temp$, sBuf_r);
+		endLine_index = Find("\r\n", sBuf_r, temp_index);
+		temp$ = MID(sBuf_r, temp_index, endLine_index - temp_index);
+		TRACE("temp$ = %s, temp_index = %d, endLine_index = %d", temp$, temp_index, endLine_index);
+		temp_index = Find(">", temp$);
+		endLine_index = LEN(temp$);
+		temp$ = MID(temp$, temp_index + 1, (endLine_index - temp_index));
+		TRACE("ending temp$ = %s, ending temp_index = %d, ending endLine_index = %d", temp$, temp_index, endLine_index);
+		Output_analog[i] = ATOI(temp$);
+	}
+    FileClose(fd);
+    temp_name = save_filename + ".s";
+	fd = FileOpen(temp_name,_O_RDONLY|_O_TRUNC|_O_TEXT);
+    FileSeek(fd, 0, SEEK_SET);
+	temp_r = FileRead(fd, sBuf_r, 6000);
+	for(i = 1 to num_s){
+    	temp$ = "<s" + ITOA(i) + ">";
+		temp_index = Find(temp$, sBuf_r);
+		endLine_index = Find("\r\n", sBuf_r, temp_index);
+		temp$ = MID(sBuf_r, (temp_index + LEN(temp$)), (endLine_index - temp_index - LEN(temp$)));
+		Output_string[i] = temp$;
+	}
+    FileClose(fd);
+
+    fd = EndFileOperations();
+	if (fd < 0){
+		PRINT ( "Error in starting file ops\n" );
+	} 
+    
+    WaitForInitializationComplete();
+    // If you are reading any Input or Output variables, uncomment
+    //   the WaitForInitializationComplete statement above and read
+    //   them afterwards.  Input/Output variables will not have
+    //   their correct values set until after the logic processor
+    //   runs and propagates the values to them.
+}
+
+

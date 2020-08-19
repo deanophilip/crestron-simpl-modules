@@ -1,0 +1,322 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+  (Fill in comments below)
+*******************************************************************************************/
+/*
+Dealer Name: HPE
+System Name: Current Sensing from Strings
+System Number:
+Programmer: DOP
+Comments:
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+// #ENABLE_DYNAMIC
+#SYMBOL_NAME "Current Sensing from Strings"
+// #HINT ""
+#DEFINE_CONSTANT MAX_INPUTS 10
+#DEFINE_CONSTANT MAX_STRING_SIZE 10
+#DEFINE_CONSTANT THRESH_RISING 0
+#DEFINE_CONSTANT THRESH_FALLING 1
+#DEFINE_CONSTANT STATE_TRIGGERED 1
+#DEFINE_CONSTANT STATE_RESET 0
+
+#CATEGORY "25" // Current Sense
+// #PRINT_TO_TRACE
+#DIGITAL_EXPAND AllWithAny
+#ANALOG_SERIAL_EXPAND AllWithAny
+// #OUTPUT_SHIFT 
+// #HELP_PDF_FILE ""
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+// #ENCODING_ASCII
+// #ENCODING_UTF16
+// #ENCODING_INHERIT_FROM_PARENT
+// #ENCODING_INHERIT_FROM_PROGRAM
+#ENABLE_TRACE
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+
+/*******************************************************************************************
+  Include Libraries
+  (Uncomment and include additional libraries as needed)
+*******************************************************************************************/
+// #CRESTRON_LIBRARY ""
+// #USER_LIBRARY ""
+
+/*******************************************************************************************
+  DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
+  (Uncomment and declare inputs and outputs as needed)
+*******************************************************************************************/
+STRING_INPUT Measurement_Input[MAX_INPUTS,1][MAX_STRING_SIZE];
+
+DIGITAL_OUTPUT Threshold_Exceeded[MAX_INPUTS,1];
+ANALOG_OUTPUT Whole_Number[MAX_INPUTS];
+ANALOG_OUTPUT Decimal_Number[MAX_INPUTS,1]; 
+
+/*******************************************************************************************
+  Parameters
+  (Uncomment and declare parameters as needed)
+*******************************************************************************************/
+// INTEGER_PARAMETER
+// SIGNED_INTEGER_PARAMETER
+// LONG_INTEGER_PARAMETER
+// SIGNED_LONG_INTEGER_PARAMETER
+STRING_PARAMETER Threshold[MAX_INPUTS][MAX_STRING_SIZE];
+
+/*******************************************************************************************
+  Parameter Properties
+  (Uncomment and declare parameter properties as needed)
+*******************************************************************************************/
+
+#BEGIN_PARAMETER_PROPERTIES Threshold
+   propValidUnits = unitString;
+   propDefaultUnit = unitString;
+   // propBounds = lower_bound , upper_bound;
+   propDefaultValue = "+1.0";
+   // propList = // { "value" , "label" } , { "value" , "label" } , ... ;
+   propShortDescription = "Threshold to test measurement against";
+   #BEGIN_PROP_FULL_DESCRIPTION  "Threshold to test mesaurement against. Threshold must be a decimal number. \"+\" or \"-\" required before the number to signify rising or falling"#END_PROP_FULL_DESCRIPTION
+   // #BEGIN_PROP_NOTES line_1...  line_2...  line_n  #END_PROP_NOTES
+#END_PARAMETER_PROPERTIES
+
+
+/*******************************************************************************************
+  Structure Definitions
+  (Uncomment and define structure definitions as needed)
+  Note:  Be sure to initialize all declared STRING variables as needed
+         For example, in Function Main: struct.myString = "";
+*******************************************************************************************/
+
+STRUCTURE _measurment
+{
+	STRING thresh_parameter[MAX_STRING_SIZE];
+	INTEGER thresh_direction;	//0 = Rising, 1 = Falling
+	INTEGER thresh_wholeNumber;
+	INTEGER thresh_decimalNumber;
+	INTEGER thresh_dSigFigs;
+	INTEGER wholeNumber;
+	INTEGER decimalNumber;
+	INTEGER dSigFigs;
+	INTEGER thresh_state;		//0 = threshold not met, 1 = threshold met
+};
+_measurment measurements[MAX_INPUTS];
+
+/*******************************************************************************************
+  Functions
+  (Add any additional functions here)
+  Note:  Functions must be physically placed before the location in
+         the code that calls them.
+*******************************************************************************************/
+
+Integer_Function Parse_Direction(STRING parameter)
+{
+	INTEGER direction;
+	STRING direction_str[MAX_STRING_SIZE];
+	direction = -1;
+	direction_str = LEFT(parameter, 1);
+    if(direction_str = "+"){
+		direction = THRESH_RISING;
+	}
+	else if(direction_str = "-"){
+		direction = THRESH_FALLING;
+	}
+	Return (direction);
+}
+
+Integer_Function Parse_WholeNumber(STRING parameter)
+{
+	INTEGER number;
+	INTEGER decimal_index;
+	STRING number_str[MAX_STRING_SIZE];
+	number = -1;
+	decimal_index = find(".", parameter);
+	if(decimal_index = 0){
+		return(number);
+	}
+	number_str = MID(parameter, 1, decimal_index - 1);
+   	number = atoi(number_str);
+	Return (number);
+}
+
+Integer_Function Parse_DecimalNumber(STRING parameter)
+{
+	INTEGER number;
+	INTEGER decimal_index;
+	STRING number_str[MAX_STRING_SIZE];
+	number = -1;
+	decimal_index = find(".", parameter);
+	if(decimal_index = 0){
+		return(number);
+	}
+	number_str = RIGHT(parameter, (len(parameter) - decimal_index));
+   	number = atoi(number_str);
+	Return (number);
+}
+
+Integer_Function getSigFigs(INTEGER number)
+{
+	INTEGER divisor;
+	INTEGER i, j;
+	if(number = 0){
+		return(1);
+	}
+	for(i = 0 to MAX_STRING_SIZE){
+		divisor = 1;
+		for(j = 1 to i){
+			divisor = divisor*10;
+		}
+		if(number < divisor){
+			return(i);
+		}
+	}
+}
+
+Integer_Function testMeasurement(INTEGER index)
+{
+	INTEGER test_status;
+	INTEGER thresh_divisor;
+	INTEGER meas_divisor;
+	INTEGER max_SigFigs;
+	INTEGER i, j;
+	test_status = -1;
+	max_SigFigs = measurements[index].thresh_dSigFigs;
+	if(measurements[index].dSigFigs > max_SigFigs){
+		max_SigFigs = measurements[index].dSigFigs;
+	}
+	if(measurements[index].thresh_direction = THRESH_FALLING){
+		if(measurements[index].thresh_wholeNumber > measurements[index].wholeNumber){
+			test_status = 1;
+		}
+		else if((measurements[index].thresh_wholeNumber = measurements[index].wholeNumber)){
+			for(i = 1 to max_SigFigs){
+				thresh_divisor = 1;
+				meas_divisor = 1;				
+				for(j = i to measurements[index].thresh_dSigFigs - 1){
+					thresh_divisor = thresh_divisor*10;
+				}
+				for(j = i to measurements[index].dSigFigs - 1){
+					meas_divisor = meas_divisor*10;
+				}
+				if((measurements[index].thresh_decimalNumber/thresh_divisor) > (measurements[index].decimalNumber/meas_divisor)){
+					test_status = 1;
+					BREAK;
+				}
+				else if((measurements[index].thresh_decimalNumber/thresh_divisor) < (measurements[index].decimalNumber/meas_divisor)){
+					test_status = 0;
+					BREAK;
+				}
+			}
+		}
+		else{
+        	test_status = 0;
+		}
+	}
+	else if(measurements[index].thresh_direction = THRESH_RISING){
+		if(measurements[index].thresh_wholeNumber < measurements[index].wholeNumber){
+			test_status = 1;
+		}
+		else if((measurements[index].thresh_wholeNumber = measurements[index].wholeNumber)){
+			if(index = 3){
+				TRACE("whole numbers match, max_SigFigs = %d\n", max_SigFigs);
+			}
+			for(i = 1 to max_SigFigs){
+				if(index = 3){
+					TRACE("inside decimal test, i = %d\n", i);
+				}
+				thresh_divisor = 1;
+				meas_divisor = 1;				
+				for(j = i to measurements[index].thresh_dSigFigs - 1){
+					thresh_divisor = thresh_divisor*10;
+				}
+				for(j = i to measurements[index].dSigFigs - 1){
+					meas_divisor = meas_divisor*10;
+				}
+				if(index = 3){
+					TRACE("meas_divisor = %d, thresh_divisor = %d\n", meas_divisor, thresh_divisor);
+					TRACE("meas_dec = %d, thresh_dec = %d\n", measurements[index].decimalNumber, measurements[index].thresh_decimalNumber);
+				}
+
+				if((measurements[index].thresh_decimalNumber/thresh_divisor) < (measurements[index].decimalNumber/meas_divisor)){
+					test_status = 1;
+					BREAK;
+				}
+				else if((measurements[index].thresh_decimalNumber/thresh_divisor) > (measurements[index].decimalNumber/meas_divisor)){
+					test_status = 0;
+					BREAK;
+				}
+			}
+		}
+		else{
+        	test_status = 0;
+		}
+	}
+	Return (test_status);
+}
+
+
+/*******************************************************************************************
+  Event Handlers
+  (Uncomment and declare additional event handlers as needed)
+*******************************************************************************************/
+
+CHANGE Measurement_Input
+{
+	INTEGER index, ret;
+	index = GetLastModifiedArrayIndex();
+	measurements[index].wholeNumber = Parse_WholeNumber(Measurement_Input[index]);
+	measurements[index].decimalNumber = Parse_DecimalNumber(Measurement_Input[index]);
+    ret = testMeasurement(index);
+	if(ret = -1){
+		TRACE("Error in test. No outcome found\n");
+	}
+	measurements[index].thresh_state = ret;
+	Whole_Number[index] = measurements[index].wholeNumber;
+	Decimal_Number[index] = measurements[index].decimalNumber;
+	Threshold_Exceeded[index] = measurements[index].thresh_state;
+}
+
+/*******************************************************************************************
+  Main()
+  Uncomment and place one-time startup code here
+  (This code will get called when the system starts up)
+*******************************************************************************************/
+
+Function Main()
+{
+    INTEGER i, ret;
+	i = 1;
+	WaitForInitializationComplete();
+    for(i = 1 to MAX_INPUTS){
+		measurements[i].thresh_parameter = Threshold[i];
+		measurements[i].thresh_direction = Parse_Direction(Threshold[i]);
+		TRACE("Direction %d: %d\n", i, measurements[i].thresh_direction);
+		measurements[i].thresh_wholeNumber = Parse_WholeNumber(Threshold[i]);
+		TRACE("Whole Number %d: %d\n", i, measurements[i].thresh_wholeNumber);
+		measurements[i].thresh_decimalNumber = Parse_DecimalNumber(Threshold[i]);
+		TRACE("Decimal Number %d: %d\n", i, measurements[i].thresh_decimalNumber);
+		measurements[i].thresh_dSigFigs = getSigFigs(measurements[i].thresh_decimalNumber);
+		TRACE("Decimal ThreshSigFigs %d: %d\n", i, measurements[i].thresh_dSigFigs);	
+		measurements[i].wholeNumber = Parse_WholeNumber(Measurement_Input[i]);
+		measurements[i].decimalNumber = Parse_DecimalNumber(Measurement_Input[i]);
+		measurements[i].dSigFigs = getSigFigs(measurements[i].decimalNumber);
+		TRACE("Decimal SigFigs %d: %d\n", i, measurements[i].dSigFigs);	
+        ret = testMeasurement(i);
+		if(ret = -1){
+			TRACE("Error in test. No outcome found on start\n");
+		}
+		measurements[i].thresh_state = ret;
+		Whole_Number[i] = measurements[i].wholeNumber;
+		Decimal_Number[i] = measurements[i].decimalNumber;
+		Threshold_Exceeded[i] = measurements[i].thresh_state;
+	}
+}
+
+
